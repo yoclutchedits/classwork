@@ -1,5 +1,5 @@
 import requests
-hf_key="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"
+#add your own key
 model_id="facebook/bart-large-mnli"
 url=f"https://router.huggingface.co/hf-inference/models/{model_id}"
 headers={"Authorization":f"Bearer {k}"}
@@ -52,4 +52,5 @@ def main():
         except Exception as e:
             print(f"an error occurred: {e}")
 if __name__=="__main__":
+
     main()
