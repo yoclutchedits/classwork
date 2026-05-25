@@ -1,0 +1,25 @@
+from classwork37_groq import generate_response as groq_model
+#from classwork37_hf import generate_response as hf_model
+def prompt_engineering():
+    print("welcome to the prompt engineering class")
+    vauge_prompt = input("enter a vauge prompt: ")
+    print("generating response...")
+    #response = hf_model(vauge_prompt)
+    response = groq_model(vauge_prompt)
+    print("response: ", response)
+    specific_prompt = input("enter a more specific prompt: ")
+    print("generating response...")
+    #response = hf_model(specific_prompt)
+    response = groq_model(specific_prompt)
+    print("response: ", response)
+    context_prompt = input("enter a prompt with more context: ")
+    print("generating response...")
+    #response = hf_model(context_prompt)
+    response = groq_model(context_prompt)
+    print("response: ", response)
+    print("reflect on the differences in the responses and how the prompt affected the output")
+    print("1) how did the responses differ?")
+    print("2) how did the prompt affect the output?")
+    print("3) which prompt produced the best response and why?")
+if __name__ == "__main__":
+    prompt_engineering()
