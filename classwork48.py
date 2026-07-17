@@ -3,8 +3,8 @@ from io import BytesIO
 import streamlit as st
 from huggingface_hub import InferenceClient
 from classwork45_groq import generate_response
-import keys
 import requests
+
 MATH_SYSTEM = """You are a Math Mastermind.
 
 Solve with clear step-by-step reasoning, correct notation, and a final answer.
@@ -59,7 +59,7 @@ def run_ai():
     html='<div class="wrap">'
     for i, h in enumerate(st.session_state.history_ata, 1):
         html+=f'<div class="card"><div class="q">Q{i}: {h["question"]}</div><div class="a">{h["answer"]}</div></div>'
-        st.markdown(html, unsafe_allow_html=True)
+    st.markdown(html+'</div>', unsafe_allow_html=True)
 def run_math():
     st.title("math problem solver")
     st.session_state.setdefault("history_math", [])
@@ -79,44 +79,45 @@ def run_math():
             else:
                 with st.spinner("Solving..."):
                     answer = math_ans(q, lvl)
-                    st.session_state.history_math.append({"question": q, "answer": answer})
+                    st.session_state.history_math.append({"question": q, "answer": answer, "level": lvl})
                     st.success("Problem solved!")
                     st.rerun()
     if not st.session_state.history_math:return
     st.markdown(CHAT_CSS, unsafe_allow_html=True)
     html='<div class="wrap">'
     for i, h in enumerate(st.session_state.history_math, 1):
-        html+=f'<div class="card"><div class="q">Q{i}: {h["question"]}<span class="meta">{lvl}</span></div><div class="a">{h["answer"]}</div></div>'
+        html+=f'<div class="card"><div class="q">Q{i}: {h["question"]}<span class="meta">{h.get("level","")}</span></div><div class="a">{h["answer"]}</div></div>'
     st.markdown(html+'</div>', unsafe_allow_html=True)
 def safe_img_gen():
     filter = "https://filters-zeta.vercel.app/api/filter"
     img_model = "stabilityai/stable-diffusion-3-medium-diffusers"
-    img_client = InferenceClient(provider='hf-inference', api_key=keys.hf_key)
+    img_client = InferenceClient(provider='hf-inference', api_key=st.secrets["hf_key"])
     st.title("Image Generation (Safe Mode)")
     def is_safe_prompt(prompt: str):
         try:
             response = requests.post(filter, json={"prompt": prompt}, timeout=15)
             if response.status_code == 200:
                 result = response.json()
-                if result.get("ok"): 
+                if result.get("ok"):
                     return True, None
+                return False, "Prompt flagged as unsafe."
             else:
                 st.error(f"Error checking prompt safety: {response.status_code} - {response.text}")
-                return False
+                return False, f"Safety check failed with status {response.status_code}"
         except Exception as e:
             st.error(f"Error occurred while checking prompt safety: {e}")
-            return False
+            return False, str(e)
     def generate_image(prompt: str):
         safe,error = is_safe_prompt(prompt)
         if not safe:
             st.error(f"Prompt is not safe: {error}")
-            return None
+            return None, error
         try:
             img=img_client.text_to_image(model=img_model, prompt=prompt)
             return img, None
         except Exception as e:
             st.error(f"Error occurred while generating image: {e}")
-            return None
+            return None, str(e)
     with st.form("img_form", clear_on_submit=True):
         prompt=st.text_area("Enter your image prompt here:", placeholder="e.g., A serene landscape with mountains and a river at sunset", key="prompt_img", height=100)
         submit=st.form_submit_button("Generate Image")
@@ -127,14 +128,15 @@ def safe_img_gen():
                 with st.spinner("Generating image..."):
                     img,error = generate_image(prompt)
                     if img:
+                        st.session_state["generated_image"] = img
                         st.image(img, caption="Generated Image", use_column_width=True)
                     else:
                         st.error(f"Failed to generate image: {error}")
-        im=st.session_state.get("generated_image")
-        if im:
-            buffer = BytesIO()
-            im.save(buffer, format="PNG")
-            st.download_button("Download Image", data=buffer.getvalue(), file_name="generated_image.png", mime="image/png")
+    im=st.session_state.get("generated_image")
+    if im:
+        buffer = BytesIO()
+        im.save(buffer, format="PNG")
+        st.download_button("Download Image", data=buffer.getvalue(), file_name="generated_image.png", mime="image/png")
 def main():
     st.set_page_config(page_title="AI Teaching Assistant", page_icon=":robot:", layout="centered")
     st.sidebar.title("AI Teaching Assistant")
